@@ -1,4 +1,4 @@
-# Option Replicating Portfolio with Neural-Networks
+# Option Replicating Portfolio with Neural Networks
 How to hedge an Option using Monte-Carlo and Neural Networks
 
 The 2 steps that this project is divided into are:
