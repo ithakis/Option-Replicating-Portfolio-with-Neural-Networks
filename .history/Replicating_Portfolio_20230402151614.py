@@ -26,7 +26,7 @@ from tensorflow.random import set_seed as tf_seed
 
 tf_seed(1234) ; seed(1234)
 
-def Replicating_Portfolio(params):
+def Replicating_Portfolio(**params):
     """ Financial parameters """
     Y       = params['Y']
     K       = params['K']
@@ -42,8 +42,6 @@ def Replicating_Portfolio(params):
     l0  = params['l0']
     c   = params['c']
     ita = params['ita']
-
-    ADJUSTMENT_FACTOR = N * P
 
     dt      = params['dt']
     n_paths  = params['n_paths']
@@ -85,7 +83,7 @@ def Replicating_Portfolio(params):
 
     """ Summary Statistics """
     E_N_T   = N_paths[:,-1].mean()
-    Payoff_Y     = np.where(Y_paths[:,-1] > K, Y_paths[:,-1], K)
+    Payoff_Y     = np.where(Y_paths[:,-1] > Y, Y_paths[:,-1], Y)
     out_of_money_P  = np.where(Y_paths[:,-1] < Y, 1.0, 0.0).mean()
 
     """ """
@@ -172,64 +170,56 @@ def Replicating_Portfolio(params):
     model2 = keras.Model(inputs=[Input_S_N, prices_1], outputs=S_out, name="Replicating_Portfolio_Q99")
 
     callback = keras.callbacks.EarlyStopping(monitor='loss', patience=7, restore_best_weights=True)
-    model1.compile(optimizer = keras.optimizers.Adam(learning_rate=1e-3),
-                loss = 'mse', run_eagerly=False, 
-                metrics=["mae", "mape"])
-    model2.compile(optimizer = keras.optimizers.Adam(learning_rate=1e-3),
-                loss = quantile_loss_f, run_eagerly=False, 
-                metrics=["mae", "mape"])
+model1.compile(optimizer = keras.optimizers.Adam(learning_rate=1e-3),
+              loss = 'mse', run_eagerly=False, 
+              metrics=["mae", "mape"])
+model2.compile(optimizer = keras.optimizers.Adam(learning_rate=1e-3),
+              loss = quantile_loss_f, run_eagerly=False, 
+              metrics=["mae", "mape"])
 
-    N_paths_NN      = N_paths / N
-    values          = np.empty_like(Y_paths)
-    values[:,-1]    = Payoff_Y * N_paths_NN[:,-1] 
-    E_payoff        = (values[:,-1]).mean()
+N_paths_NN      = N_paths / N
+values          = np.empty_like(Y_paths)
+values[:,-1]    = Payoff_Y * N_paths_NN[:,-1] 
+E_payoff        = (values[:,-1]).mean()
 
-    """ Calculate: Payoff for Options """
-    Flag = True ; its = 0
-    Errors      = np.zeros((1,2))
-    P_E_Values  = np.ones((1,3)) * values[:,-1].mean()
-    VaR_HV      = []
-    Phi_Psi_HV  = []
-    for t_i in trange(n_time_steps-2, -1, -1):
-        print(f'\n>> Y_({(t_i+1)*dt:.2f}) = {Y_paths[:,t_i+1].mean():.3f}, N_({(t_i+1)*dt:.2f}) = {N_paths_NN[:,t_i+1].mean():.3f}')
-        _Y_t  = Y_paths[:,t_i]
-        _B_t  = B[:,t_i]
-        _Y_t1 = Y_paths[:,t_i+1]
-        _B_t1 = B[:,t_i+1]
+""" Calculate: Payoff for Options """
+Flag = True ; its = 0
+Errors      = np.zeros((1,2))
+P_E_Values  = np.ones((1,3)) * values[:,-1].mean()
+VaR_HV      = []
+Phi_Psi_HV  = []
+for t_i in trange(n_time_steps-2, -1, -1):
+    print(f'Y_({(t_i+1)*dt:.2f}) = {Y_paths[:,t_i+1].mean():.3f}, N_({(t_i+1)*dt:.2f}) = {N_paths_NN[:,t_i+1].mean():.3f}')
+    _Y_t  = Y_paths[:,t_i]
+    _B_t  = B[:,t_i]
+    _Y_t1 = Y_paths[:,t_i+1]
+    _B_t1 = B[:,t_i+1]
 
-        X0 = [np.stack((_Y_t, N_paths_NN[:,t_i], L_paths[:,t_i]), axis=-1), np.stack((_Y_t, _B_t), axis=-1)]
-        X1 = [np.stack((_Y_t, N_paths_NN[:,t_i], L_paths[:,t_i]), axis=-1), np.stack((_Y_t1, _B_t1), axis=-1)]
+    X0 = [np.stack((_Y_t, N_paths_NN[:,t_i], L_paths[:,t_i]), axis=-1), np.stack((_Y_t, _B_t), axis=-1)]
+    X1 = [np.stack((_Y_t, N_paths_NN[:,t_i], L_paths[:,t_i]), axis=-1), np.stack((_Y_t1, _B_t1), axis=-1)]
 
-        epochs = 500
-        if Flag :
-            # print(f'S.mean: {S.mean():.5f}\nP.mean: {model.predict(X0, verbose=0, batch_size=512).squeeze().mean():.5f}')
-            callabacks = [lr_scheduler, keras.callbacks.EarlyStopping(monitor='loss', patience=50, restore_best_weights=True)]
-        else : 
-            epochs = 100 
-            callabacks = [callback]
+    epochs = 500
+    if Flag :
+        # print(f'S.mean: {S.mean():.5f}\nP.mean: {model.predict(X0, verbose=0, batch_size=512).squeeze().mean():.5f}')
+        callabacks = [lr_scheduler, keras.callbacks.EarlyStopping(monitor='loss', patience=50, restore_best_weights=True)]
+    else : 
+        epochs = 100 
+        callabacks = [callback]
 
-        model1.fit(X1, values[:,t_i+1], epochs=epochs, validation_split=0.0, verbose=0, batch_size=512, callbacks=callabacks) #, initial_epoch= 200 if t_i != n_time_steps-2 else 0)
-        g_t  = model1.predict(X0, verbose=0, batch_size=512).squeeze()
-        g_t1 = model1.predict(X1, verbose=0, batch_size=512).squeeze()
+    model1.fit(X1, values[:,t_i+1], epochs=epochs, validation_split=0.0, verbose=0, batch_size=512, callbacks=callabacks) #, initial_epoch= 200 if t_i != n_time_steps-2 else 0)
+    g_t  = model1.predict(X0, verbose=0, batch_size=512).squeeze()
+    g_t1 = model1.predict(X1, verbose=0, batch_size=512).squeeze()
 
-        Errors = np.append(Errors, np.array(model1.evaluate(X1, values[:,t_i+1], batch_size=512)[1:]).reshape(1,2), axis=0)
-        
-        model2.fit(X1, values[:,t_i+1], epochs=epochs, validation_split=0.0, verbose=0, batch_size=512, callbacks=callabacks) #, initial_epoch= 200 if t_i != n_time_steps-2 else 0)    
-        h_t  = model2.predict(X0, verbose=0, batch_size=512).squeeze()
-        h_t1 = model2.predict(X1, verbose=0, batch_size=512).squeeze()
+    Errors = np.append(Errors, np.array(model1.evaluate(X1, values[:,t_i+1], batch_size=512)[1:]).reshape(1,2), axis=0)
+    
+    model2.fit(X1, values[:,t_i+1], epochs=epochs, validation_split=0.0, verbose=0, batch_size=512, callbacks=callabacks) #, initial_epoch= 200 if t_i != n_time_steps-2 else 0)    
+    h_t  = model2.predict(X0, verbose=0, batch_size=512).squeeze()
+    h_t1 = model2.predict(X1, verbose=0, batch_size=512).squeeze()
 
-        values[:,t_i] = g_t + cost_of_capital*(h_t - g_t)
+    values[:,t_i] = g_t + cost_of_capital*(h_t - g_t)
 
-        """ Update phi-psi and VaR """
-        Phi_Psi_HV, VaR_HV = get_phi_psi_VaR(model1, model2, X0, Phi_Psi_HV, VaR_HV, cost_of_capital, values[:,t_i+1], _Y_t1, _B_t1)
+    """ Update phi-psi and VaR """
+    Phi_Psi_HV, VaR_HV = get_phi_psi_VaR(model1, model2, X0, Phi_Psi_HV, VaR_HV, cost_of_capital, values[:,t_i+1], _Y_t1, _B_t1)
 
-        its += 1 ; Flag = False 
-        P_E_Values = np.append(P_E_Values, np.array([values[:,t_i].mean(), E_payoff*np.exp(-mu*dt*its), E_payoff*np.exp(-r*dt*its)]).reshape(1,3), axis=0)
-
-    phi_psi_df = pd.DataFrame(Phi_Psi_HV, columns=['Value', 'T', 'Type'])
-    phi_psi_df.Value *= ADJUSTMENT_FACTOR 
-    _ppg = phi_psi_df.groupby(['T', 'Type']).agg('mean')
-
-    phi = _ppg.loc[(0, "Phi")].mean()
-    psi = _ppg.loc[(0, "Psi")].mean()
-    return phi, psi
+    its += 1 ; Flag = False 
+    P_E_Values = np.append(P_E_Values, np.array([values[:,t_i].mean(), E_payoff*np.exp(-mu*dt*its), E_payoff*np.exp(-r*dt*its)]).reshape(1,3), axis=0)

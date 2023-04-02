@@ -26,7 +26,7 @@ from tensorflow.random import set_seed as tf_seed
 
 tf_seed(1234) ; seed(1234)
 
-def Replicating_Portfolio(params):
+def Replicating_Portfolio(**params):
     """ Financial parameters """
     Y       = params['Y']
     K       = params['K']
@@ -43,8 +43,7 @@ def Replicating_Portfolio(params):
     c   = params['c']
     ita = params['ita']
 
-    ADJUSTMENT_FACTOR = N * P
-
+    ADJUSTMENT_FACTOR
     dt      = params['dt']
     n_paths  = params['n_paths']
 
@@ -85,7 +84,7 @@ def Replicating_Portfolio(params):
 
     """ Summary Statistics """
     E_N_T   = N_paths[:,-1].mean()
-    Payoff_Y     = np.where(Y_paths[:,-1] > K, Y_paths[:,-1], K)
+    Payoff_Y     = np.where(Y_paths[:,-1] > Y, Y_paths[:,-1], Y)
     out_of_money_P  = np.where(Y_paths[:,-1] < Y, 1.0, 0.0).mean()
 
     """ """
@@ -191,7 +190,7 @@ def Replicating_Portfolio(params):
     VaR_HV      = []
     Phi_Psi_HV  = []
     for t_i in trange(n_time_steps-2, -1, -1):
-        print(f'\n>> Y_({(t_i+1)*dt:.2f}) = {Y_paths[:,t_i+1].mean():.3f}, N_({(t_i+1)*dt:.2f}) = {N_paths_NN[:,t_i+1].mean():.3f}')
+        print(f'Y_({(t_i+1)*dt:.2f}) = {Y_paths[:,t_i+1].mean():.3f}, N_({(t_i+1)*dt:.2f}) = {N_paths_NN[:,t_i+1].mean():.3f}')
         _Y_t  = Y_paths[:,t_i]
         _B_t  = B[:,t_i]
         _Y_t1 = Y_paths[:,t_i+1]
@@ -226,10 +225,10 @@ def Replicating_Portfolio(params):
         its += 1 ; Flag = False 
         P_E_Values = np.append(P_E_Values, np.array([values[:,t_i].mean(), E_payoff*np.exp(-mu*dt*its), E_payoff*np.exp(-r*dt*its)]).reshape(1,3), axis=0)
 
-    phi_psi_df = pd.DataFrame(Phi_Psi_HV, columns=['Value', 'T', 'Type'])
-    phi_psi_df.Value *= ADJUSTMENT_FACTOR 
-    _ppg = phi_psi_df.groupby(['T', 'Type']).agg('mean')
+        phi_psi_df = pd.DataFrame(Phi_Psi_HV, columns=['Value', 'T', 'Type'])
+        phi_psi_df.Value *= ADJUSTMENT_FACTOR 
+        _ppg = phi_psi_df.groupby(['T', 'Type']).agg('mean')
 
-    phi = _ppg.loc[(0, "Phi")].mean()
-    psi = _ppg.loc[(0, "Psi")].mean()
-    return phi, psi
+        # print(f'Phi t=0 : {_ppg.loc[(0, "Phi")].mean():,.0f} Stocks')
+        # print(f'Psi t=0 : {_ppg.loc[(0, "Psi")].mean():,.0f} Bonds')
+        return Phi_Psi_HV

@@ -191,7 +191,7 @@ def Replicating_Portfolio(params):
     VaR_HV      = []
     Phi_Psi_HV  = []
     for t_i in trange(n_time_steps-2, -1, -1):
-        print(f'\n>> Y_({(t_i+1)*dt:.2f}) = {Y_paths[:,t_i+1].mean():.3f}, N_({(t_i+1)*dt:.2f}) = {N_paths_NN[:,t_i+1].mean():.3f}')
+        print(f'Y_({(t_i+1)*dt:.2f}) = {Y_paths[:,t_i+1].mean():.3f}, N_({(t_i+1)*dt:.2f}) = {N_paths_NN[:,t_i+1].mean():.3f}')
         _Y_t  = Y_paths[:,t_i]
         _B_t  = B[:,t_i]
         _Y_t1 = Y_paths[:,t_i+1]
@@ -226,10 +226,11 @@ def Replicating_Portfolio(params):
         its += 1 ; Flag = False 
         P_E_Values = np.append(P_E_Values, np.array([values[:,t_i].mean(), E_payoff*np.exp(-mu*dt*its), E_payoff*np.exp(-r*dt*its)]).reshape(1,3), axis=0)
 
-    phi_psi_df = pd.DataFrame(Phi_Psi_HV, columns=['Value', 'T', 'Type'])
-    phi_psi_df.Value *= ADJUSTMENT_FACTOR 
-    _ppg = phi_psi_df.groupby(['T', 'Type']).agg('mean')
+        phi_psi_df = pd.DataFrame(Phi_Psi_HV, columns=['Value', 'T', 'Type'])
+        phi_psi_df.Value *= ADJUSTMENT_FACTOR 
+        _ppg = phi_psi_df.groupby(['T', 'Type']).agg('mean')
 
-    phi = _ppg.loc[(0, "Phi")].mean()
-    psi = _ppg.loc[(0, "Psi")].mean()
-    return phi, psi
+        phi = _ppg.loc[(0, "Phi")].mean()
+        phi = _ppg.loc[(0, "Phi")].mean()
+        # print(f'Psi t=0 : {_ppg.loc[(0, "Psi")].mean():,.0f} Bonds')
+        return Phi_Psi_HV

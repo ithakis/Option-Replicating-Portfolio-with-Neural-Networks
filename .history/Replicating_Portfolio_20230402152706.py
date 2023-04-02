@@ -191,7 +191,7 @@ def Replicating_Portfolio(params):
     VaR_HV      = []
     Phi_Psi_HV  = []
     for t_i in trange(n_time_steps-2, -1, -1):
-        print(f'\n>> Y_({(t_i+1)*dt:.2f}) = {Y_paths[:,t_i+1].mean():.3f}, N_({(t_i+1)*dt:.2f}) = {N_paths_NN[:,t_i+1].mean():.3f}')
+        print(f'>> Y_({(t_i+1)*dt:.2f}) = {Y_paths[:,t_i+1].mean():.3f}, N_({(t_i+1)*dt:.2f}) = {N_paths_NN[:,t_i+1].mean():.3f}')
         _Y_t  = Y_paths[:,t_i]
         _B_t  = B[:,t_i]
         _Y_t1 = Y_paths[:,t_i+1]
