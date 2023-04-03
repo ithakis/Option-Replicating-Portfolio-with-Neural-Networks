@@ -234,20 +234,16 @@ def Replicating_Portfolio(params):
     psi = _ppg.loc[(0, "Psi")].mean()
     return phi, psi
 
-def Replicating_Portfolio_SV(params):
+def Replicating_Portfolio_New(params):
     """ Financial parameters """
     Y       = params['Y']
     K       = params['K']
     T       = params['T']
     mu      = params['mu']
     r       = params['r']
-    s0      = params['s0']
 
     """ SV paramters """
     a       = params['a']
-    b       = params['b']
-    c       = params['c']
-
     rebalancing = params['rebalancing']
 
     N   = params['N']
@@ -277,14 +273,16 @@ def Replicating_Portfolio_SV(params):
     Y_paths[:,0] = np.log(Y)
 
     """ SV - Verion """
-    vt = np.full(shape=(int(2**n_paths),n_time_steps), fill_value=s0) # initial variance 
+    vt = np.full(shape=(int(2**n_paths),n_time_steps), fill_value=sigma**2) # initial variance 
     print('----------------------------------------------------------------')
     for t in range(1,n_time_steps):
+        Y_paths[:,t] = Y_paths[:,t-1] + Y_paths[:,t-1] * (mu*dt + sigma * np.sqrt(dt)*W1[:,t]).squeeze()
         """ Advanced Version : continious time + Stochastic Volatility """
         # Simulate variance processes
-        vt[:,t] = vt[:,t-1] + a*(b - vt[:,t-1]) + c*np.sqrt(vt[:,t-1]*dt)*W_SV[:,t]
+        vt[:,t] = vt[:,t-1] + kappa_dt*(theta - vt[:,t-1]) + sigma_sdt*np.sqrt(vt[:,t-1]*dt)*W_SV[:,t]
+        volatility = vt[:,t] if SV else sigma**2
         # Simulate log asset prices
-        Y_paths[:,t] = Y_paths[:,t-1] + ((mu - 0.5*vt[:,t]**2)*dt + vt[:,t]*np.sqrt(dt)*W1[:,t])
+        Y_paths[:,t] = Y_paths[:,t-1] + ((mu - 0.5*volatility)*dt + np.sqrt(volatility*dt)*W1[:,t])
 
     Y_paths = np.exp(Y_paths)
 
